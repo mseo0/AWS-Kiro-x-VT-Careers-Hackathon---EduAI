@@ -51,7 +51,7 @@ function buildInputPanel(container) {
         <div class="panel-label">Course Input</div>
 
         <label class="input-group">Topic
-          <input id="topic" type="text" value="Climate change & ecosystems" placeholder="e.g. Climate change & ecosystems" required />
+          <input id="topic" type="text" placeholder="e.g. Climate change & ecosystems" required />
           <span class="validation-msg hidden" id="topic-error">Topic is required.</span>
         </label>
 
@@ -146,7 +146,7 @@ function buildInputPanel(container) {
   const objectivesInput = container.querySelector("#objectives");
   const objectivesWarn = container.querySelector("#objectives-warn");
 
-  syncRunButton(runBtn, topicInput.value);
+  syncRunButton(runBtn, "");
 
   const stopBtn = container.querySelector("#stop-btn");
   stopBtn.addEventListener("click", async () => {

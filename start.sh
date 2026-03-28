@@ -1,17 +1,18 @@
 #!/bin/bash
 
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+
 # Start backend
-cd backend && python3 -m uvicorn main:app --reload --port 8000 &
+(cd "$ROOT/backend" && python3 -m uvicorn main:app --reload --port 8000) &
 BACKEND_PID=$!
 
 # Start frontend
-cd ../frontend && npm run dev &
+(cd "$ROOT/frontend" && npm run dev) &
 FRONTEND_PID=$!
 
-echo "Backend PID: $BACKEND_PID"
+echo "Backend PID:  $BACKEND_PID"
 echo "Frontend PID: $FRONTEND_PID"
 echo "Press Ctrl+C to stop both"
 
-# Kill both on exit
-trap "kill $BACKEND_PID $FRONTEND_PID" EXIT
+trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null" EXIT
 wait
