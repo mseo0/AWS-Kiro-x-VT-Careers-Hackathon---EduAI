@@ -1,59 +1,79 @@
 import JSZip from "jszip";
 
-/**
- * Build and trigger a zip download containing all course outputs.
- * @param {object} result - the result object from GET /result/{job_id}
- */
 export async function downloadCourseZip(result) {
   const { course_package, shared_context } = result;
   const topic = shared_context?.topic || "course";
   const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40);
+  const sep = "=".repeat(60);
 
   const zip = new JSZip();
   const folder = zip.folder(slug);
 
   // Lesson plan
-  const lesson = shared_context?.prior_outputs?.lesson_plan || course_package || "";
-  if (lesson) folder.file("lesson-plan.md", lesson);
+  const lesson = shared_context?.prior_outputs?.lesson_plan || "";
+  if (lesson) {
+    folder.file("lesson-plan.txt", `LESSON PLAN: ${topic.toUpperCase()}\n${sep}\n\n${lesson}`);
+  }
 
-  // Sources as a readable text file
+  // Reading list
   const sources = shared_context?.sources || [];
   if (sources.length) {
-    const sourcesText = sources
-      .map((s, i) => `${i + 1}. ${s.title}\n   ${s.url}\n   ${s.summary}`)
-      .join("\n\n");
-    folder.file("reading-list.txt", `Reading List: ${topic}\n${"=".repeat(40)}\n\n${sourcesText}`);
+    const lines = sources.map((s, i) =>
+      `${i + 1}. ${s.title}\n   URL: ${s.url}\n   ${s.summary}`
+    ).join("\n\n");
+    folder.file("reading-list.txt", `READING LIST: ${topic.toUpperCase()}\n${sep}\n\n${lines}`);
   }
 
-  // Quiz bank as JSON + readable txt
+  // Quiz bank
   const quiz = shared_context?.prior_outputs?.quiz_bank;
-  if (quiz) {
-    folder.file("quiz-bank.json", JSON.stringify(quiz, null, 2));
+  if (quiz?.questions?.length) {
+    const lines = quiz.questions.map((q) => {
+      const opts = q.options.map((opt, i) => {
+        const letter = ["A", "B", "C", "D"][i];
+        return `  ${letter}. ${opt}${letter === q.correct ? "  [CORRECT]" : ""}`;
+      }).join("\n");
+      return `Q${q.id}. [${q.bloom_level.toUpperCase()}]\n${q.question}\n${opts}`;
+    }).join("\n\n");
 
-    if (quiz.questions?.length) {
-      const quizTxt = quiz.questions.map((q) =>
-        `Q${q.id}. [${q.bloom_level}] ${q.question}\n` +
-        q.options.map((opt, i) => {
-          const letter = ["A","B","C","D"][i];
-          return `  ${letter}. ${opt}${letter === q.correct ? " ✓" : ""}`;
-        }).join("\n")
-      ).join("\n\n");
-      folder.file("quiz-bank.txt", `Quiz Bank: ${topic}\n${"=".repeat(40)}\n\n${quizTxt}`);
+    let rubricText = "";
+    if (quiz.rubric) {
+      const criteria = (quiz.rubric.criteria || []).map((c, i) => `  ${i + 1}. ${c}`).join("\n");
+      rubricText = `\n\n${sep}\nRUBRIC\n${sep}\n${criteria}\n\nScoring: ${quiz.rubric.scoring || ""}`;
     }
+
+    folder.file("quiz-bank.txt", `QUIZ BANK: ${topic.toUpperCase()}\n${sep}\n\n${lines}${rubricText}`);
   }
 
-  // Full course package markdown
-  if (course_package) folder.file("course-package.md", course_package);
+  // Full course package
+  if (course_package) {
+    folder.file("course-package.txt", course_package);
+  }
 
-  // SharedContext JSON for reference
-  folder.file("context.json", JSON.stringify(shared_context, null, 2));
+  // Context summary
+  const ctx = shared_context;
+  const contextLines = [
+    `COURSE CONTEXT`,
+    sep,
+    `Topic:      ${ctx.topic}`,
+    `Audience:   ${ctx.audience}`,
+    `Duration:   ${ctx.duration}`,
+    `Tone:       ${ctx.tone}`,
+    `Outputs:    ${(ctx.outputs_requested || []).join(", ")}`,
+    ``,
+    `LEARNING OBJECTIVES`,
+    sep,
+    ...(ctx.learning_objectives?.length
+      ? ctx.learning_objectives.map((o, i) => `${i + 1}. ${o}`)
+      : ["(none provided — derived from topic)"]),
+  ].join("\n");
+  folder.file("context.txt", contextLines);
 
   const blob = await zip.generateAsync({ type: "blob" });
-  triggerDownload(blob, `${slug}-course-package.zip`, "application/zip");
+  triggerDownload(blob, `${slug}-course-package.zip`);
 }
 
-function triggerDownload(blob, filename, type) {
-  const url = URL.createObjectURL(new Blob([blob], { type }));
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(new Blob([blob], { type: "application/zip" }));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
