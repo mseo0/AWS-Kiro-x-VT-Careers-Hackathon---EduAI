@@ -33,7 +33,7 @@ async def run(ctx: SharedContext) -> CriticResult:
     }
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         contents=json.dumps(payload),
         config=types.GenerateContentConfig(system_instruction=prompt),
     )

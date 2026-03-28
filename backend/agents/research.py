@@ -19,7 +19,7 @@ async def run(ctx: SharedContext) -> list[Source]:
     })
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         contents=user_message,
         config=types.GenerateContentConfig(
             system_instruction=prompt,

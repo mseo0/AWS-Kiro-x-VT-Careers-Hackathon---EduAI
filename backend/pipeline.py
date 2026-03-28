@@ -80,6 +80,7 @@ async def run_pipeline(ctx: SharedContext, queue: asyncio.Queue) -> SharedContex
         await _emit(queue, "formatter", "done", "Course package ready.")
 
     except Exception as exc:
+        logger.error(f"Pipeline error in run_pipeline: {exc}", exc_info=True)
         ctx.status = ContextStatus.error
         await queue.put({"agent": "pipeline", "status": "error", "message": str(exc)})
         raise PipelineError(str(exc)) from exc
@@ -142,6 +143,7 @@ async def run_feedback_pipeline(
         await _emit(queue, "formatter", "done", "Course package updated.")
 
     except Exception as exc:
+        logger.error(f"Pipeline error in run_feedback_pipeline: {exc}", exc_info=True)
         ctx.status = ContextStatus.error
         await queue.put({"agent": "pipeline", "status": "error", "message": str(exc)})
         raise PipelineError(str(exc)) from exc

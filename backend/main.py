@@ -4,6 +4,10 @@ import uuid
 import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+
+# Load .env BEFORE any module that checks GOOGLE_API_KEY
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -12,8 +16,6 @@ from context import (
     ResultResponse, seed_context, ContextStatus,
 )
 from pipeline import run_pipeline, run_feedback_pipeline
-
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # In-memory job store: job_id -> {ctx, queue, task}
 job_store: dict[str, dict] = {}
