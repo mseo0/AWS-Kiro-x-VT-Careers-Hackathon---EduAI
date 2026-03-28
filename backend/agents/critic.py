@@ -3,7 +3,9 @@ from google import genai
 from google.genai import types
 from context import SharedContext, CriticResult, RevisionRequest
 from prompt_loader import load_prompt
+from config import GEMINI_MODEL
 from mcp_client import _strip_json_fences
+from agents.utils import extract_text
 
 
 async def run(ctx: SharedContext) -> CriticResult:
@@ -33,12 +35,12 @@ async def run(ctx: SharedContext) -> CriticResult:
     }
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.5-flash",
+        model=GEMINI_MODEL,
         contents=json.dumps(payload),
         config=types.GenerateContentConfig(system_instruction=prompt),
     )
 
-    text = response.text.strip()
+    text = extract_text(response)
     data = json.loads(_strip_json_fences(text))
 
     ctx.critic_passes += 1

@@ -5,31 +5,58 @@ export function renderEmptyOutputPanel(container, state = {}) {
   const message = state.error || (state.loading ? "Generating your course package..." : "Run the pipeline to generate your course package.");
   const glyph = state.error ? "!" : state.loading ? "⋯" : "◎";
 
+  // Determine which tabs to show based on selected outputs (or all by default)
+  const outputs = state.outputs || ["lesson", "quiz", "reading"];
+  const showLesson = outputs.includes("lesson");
+  const showSources = outputs.includes("reading");
+  const showQuiz = outputs.includes("quiz");
+  const defaultTab = showLesson ? "lesson" : showSources ? "sources" : showQuiz ? "quiz" : "context";
+
+  const visibleTabs = [
+    showLesson && "lesson",
+    showSources && "sources",
+    showQuiz && "quiz",
+    "context",
+  ].filter(Boolean);
+
   container.innerHTML = `
     <div class="panel-label">Output</div>
     <div class="output-tab-row tabs">
-      ${renderTabs("lesson")}
+      ${visibleTabs.map((tab) =>
+        `<button class="output-tab tab-btn ${tab === defaultTab ? "active" : ""}" data-tab="${tab}">${tabLabel(tab)}</button>`
+      ).join("")}
     </div>
     <div id="empty-state" class="empty-state ${state.error ? "error" : ""}">
       <div class="big">${glyph}</div>
       <div>${message}</div>
     </div>
-    ${TAB_ORDER.map((tab) => `
-      <div class="output-block ${tab === "lesson" ? "visible" : "hidden"}" id="tab-${tab}" data-tab-panel="${tab}">
-        <div class="output-block-label">${tabLabel(tab)}</div>
-      </div>
-    `).join("")}
   `;
 
   wireTabEvents(container);
-  hideAllPanels(container);
 }
 
 export function renderOutputPanel(container, result) {
   const { course_package, shared_context } = result;
+  const requested = new Set(shared_context?.outputs_requested || []);
   const lessonContent = shared_context?.prior_outputs?.lesson_plan || course_package;
   const quizBank = shared_context?.prior_outputs?.quiz_bank;
   const sources = shared_context?.sources || [];
+
+  // Determine which tabs to show
+  // "sources" shows if "reading" was requested (research always runs, but only show if requested)
+  const showLesson = requested.has("lesson");
+  const showSources = requested.has("reading");
+  const showQuiz = requested.has("quiz");
+
+  // Pick the first visible tab as default
+  const defaultTab = showLesson ? "lesson" : showSources ? "sources" : showQuiz ? "quiz" : "context";
+
+  const visibleTabs = [
+    showLesson && "lesson",
+    showSources && "sources",
+    showQuiz && "quiz",
+    "context",
+  ].filter(Boolean);
 
   container.innerHTML = `
     <div class="output-header">
@@ -43,22 +70,27 @@ export function renderOutputPanel(container, result) {
       </button>
     </div>
     <div class="output-tab-row tabs">
-      ${renderTabs("lesson")}
+      ${visibleTabs.map((tab) =>
+        `<button class="output-tab tab-btn ${tab === defaultTab ? "active" : ""}" data-tab="${tab}">${tabLabel(tab)}</button>`
+      ).join("")}
     </div>
     <div id="empty-state" class="empty-state hidden"></div>
-    <section class="output-block visible tab-content" id="tab-lesson" data-tab-panel="lesson">
+    ${showLesson ? `
+    <section class="output-block ${defaultTab === "lesson" ? "visible" : "hidden"} tab-content" id="tab-lesson" data-tab-panel="lesson">
       <div class="output-block-label">Lesson</div>
       <div class="output-content markdown">${renderLesson(lessonContent)}</div>
-    </section>
-    <section class="output-block hidden tab-content" id="tab-sources" data-tab-panel="sources">
+    </section>` : ""}
+    ${showSources ? `
+    <section class="output-block ${defaultTab === "sources" ? "visible" : "hidden"} tab-content" id="tab-sources" data-tab-panel="sources">
       <div class="output-block-label">Sources</div>
       <div class="output-content">${renderSources(sources)}</div>
-    </section>
-    <section class="output-block hidden tab-content" id="tab-quiz" data-tab-panel="quiz">
+    </section>` : ""}
+    ${showQuiz ? `
+    <section class="output-block ${defaultTab === "quiz" ? "visible" : "hidden"} tab-content" id="tab-quiz" data-tab-panel="quiz">
       <div class="output-block-label">Quiz</div>
       <div class="output-content">${renderQuiz(quizBank)}</div>
-    </section>
-    <section class="output-block hidden tab-content" id="tab-context" data-tab-panel="context">
+    </section>` : ""}
+    <section class="output-block ${defaultTab === "context" ? "visible" : "hidden"} tab-content" id="tab-context" data-tab-panel="context">
       <div class="output-block-label">Context Obj</div>
       <div class="output-content">
         <pre>${escapeHtml(JSON.stringify(shared_context, null, 2))}</pre>

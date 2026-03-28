@@ -3,7 +3,7 @@
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 # Start backend
-(cd "$ROOT/backend" && python3 -m uvicorn main:app --reload --port 8000) &
+(cd "$ROOT/backend" && python3 -m uvicorn main:app --reload --reload-dir "$ROOT/backend" --port 8000) &
 BACKEND_PID=$!
 
 # Start frontend

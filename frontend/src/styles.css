@@ -235,7 +235,12 @@ body::before {
   font-family: "Instrument Sans", sans-serif;
 }
 
-.tag:hover,
+.tag:hover {
+  border-color: rgba(134, 197, 60, 0.6);
+  background: rgba(134, 197, 60, 0.2);
+  color: #86c53c;
+}
+
 .tag.active {
   border-color: rgba(212, 245, 160, 0.45);
   background: rgba(212, 245, 160, 0.12);
@@ -828,4 +833,14 @@ body::before {
 
 .get-started-btn:active {
   transform: translateY(0);
+}
+
+/* Skipped agent card */
+.agent-card.skipped {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.status-dot.skipped {
+  background: #475569;
+  opacity: 0.5;
 }

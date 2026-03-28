@@ -22,7 +22,6 @@ class OutputType(str, Enum):
     lesson = "lesson"
     quiz = "quiz"
     reading = "reading"
-    slides = "slides"
 
 
 class ContextStatus(str, Enum):
@@ -47,7 +46,6 @@ class FeedbackEntry(BaseModel):
 class PriorOutputs(BaseModel):
     lesson_plan: Optional[str] = None
     quiz_bank: Optional[dict] = None
-    slide_outlines: Optional[str] = None
     course_package: Optional[str] = None
 
 
@@ -83,7 +81,7 @@ class GenerateRequest(BaseModel):
     duration: str
     tone: str  # free-form
     learning_objectives: list[str] = []
-    outputs_requested: list[OutputType] = list(OutputType)
+    outputs_requested: list[OutputType]  # required — no default
     document_context: Optional[str] = None  # extracted text from uploaded PDF
 
 

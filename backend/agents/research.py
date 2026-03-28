@@ -3,7 +3,11 @@ from google import genai
 from google.genai import types
 from context import SharedContext, Source
 from prompt_loader import load_prompt
+from config import GEMINI_MODEL
 from mcp_client import _strip_json_fences
+
+
+from agents.utils import extract_text
 
 
 async def run(ctx: SharedContext) -> list[Source]:
@@ -19,7 +23,7 @@ async def run(ctx: SharedContext) -> list[Source]:
     })
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.5-flash",
+        model=GEMINI_MODEL,
         contents=user_message,
         config=types.GenerateContentConfig(
             system_instruction=prompt,
@@ -27,7 +31,7 @@ async def run(ctx: SharedContext) -> list[Source]:
         ),
     )
 
-    text = _extract_text(response)
+    text = extract_text(response)
     raw = json.loads(_strip_json_fences(text))
 
     sources = [Source(**s) for s in raw]

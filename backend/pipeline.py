@@ -28,26 +28,35 @@ async def run_pipeline(ctx: SharedContext, queue: asyncio.Queue) -> SharedContex
     Emits SSE-ready dicts to queue on each state change.
     """
     try:
-        # Orchestrator
-        await _emit(queue, "orchestrator", "running", "Seeding pipeline...")
-        await orchestrator.run(ctx)
-        await _emit(queue, "orchestrator", "done", "Pipeline seeded.")
+        # Orchestrator — plans which agents to run
+        await _emit(queue, "orchestrator", "running", "Planning pipeline...")
+        plan = await orchestrator.run(ctx)
+        parallel_agents = plan["parallel"]
+        await _emit(queue, "orchestrator", "done", plan["message"])
 
-        # Research
+        # Research — always runs
         await _emit(queue, "research", "running", "Searching academic sources...")
         await research.run(ctx)
         await _emit(queue, "research", "done", f"Found {len(ctx.sources)} sources.")
 
-        # Content + Assessment in parallel
-        await _emit(queue, "content", "running", "Generating lesson plan...")
-        await _emit(queue, "assessment", "running", "Generating quiz bank...")
-        await asyncio.gather(
-            content.run(ctx),
-            assessment.run(ctx),
-        )
-        await _emit(queue, "content", "done", "Lesson plan complete.")
-        await _emit(queue, "assessment", "done", "Quiz bank complete.")
+        # Run planned agents in parallel
+        tasks = []
+        for agent_name in parallel_agents:
+            if agent_name == "content":
+                await _emit(queue, "content", "running", "Generating lesson plan...")
+                tasks.append(content.run(ctx))
+            elif agent_name == "assessment":
+                await _emit(queue, "assessment", "running", "Generating quiz bank...")
+                tasks.append(assessment.run(ctx))
 
+        if tasks:
+            await asyncio.gather(*tasks)
+
+        for agent_name in parallel_agents:
+            if agent_name == "content":
+                await _emit(queue, "content", "done", "Lesson plan complete.")
+            elif agent_name == "assessment":
+                await _emit(queue, "assessment", "done", "Quiz bank complete.")
         # Critic loop (max 2 passes)
         while True:
             await _emit(queue, "critic", "running", f"Reviewing outputs (pass {ctx.critic_passes + 1})...")
@@ -59,18 +68,18 @@ async def run_pipeline(ctx: SharedContext, queue: asyncio.Queue) -> SharedContex
             await _emit(queue, "critic", "done", f"Revision requested ({len(result.revision_requests)} issues).")
             revision_tasks = []
             for req in result.revision_requests:
-                if req.agent == "content":
+                if req.agent == "content" and "content" in parallel_agents:
                     await _emit(queue, "content", "running", "Revising lesson plan...")
                     revision_tasks.append(content.run(ctx, revision=req.instructions))
-                elif req.agent == "assessment":
+                elif req.agent == "assessment" and "assessment" in parallel_agents:
                     await _emit(queue, "assessment", "running", "Revising quiz bank...")
                     revision_tasks.append(assessment.run(ctx, revision=req.instructions))
             if revision_tasks:
                 await asyncio.gather(*revision_tasks)
             for req in result.revision_requests:
-                if req.agent == "content":
+                if req.agent == "content" and "content" in parallel_agents:
                     await _emit(queue, "content", "done", "Lesson plan revised.")
-                elif req.agent == "assessment":
+                elif req.agent == "assessment" and "assessment" in parallel_agents:
                     await _emit(queue, "assessment", "done", "Quiz bank revised.")
 
         # Formatter

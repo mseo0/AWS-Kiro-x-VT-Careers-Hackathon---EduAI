@@ -4,6 +4,8 @@ from google import genai
 from google.genai import types
 from context import SharedContext
 from prompt_loader import load_prompt
+from config import GEMINI_MODEL
+from agents.utils import extract_text
 
 
 async def run(ctx: SharedContext, revision: Optional[str] = None) -> str:
@@ -27,11 +29,11 @@ async def run(ctx: SharedContext, revision: Optional[str] = None) -> str:
         payload["previous_lesson_plan"] = ctx.prior_outputs.lesson_plan
 
     response = await client.aio.models.generate_content(
-        model="gemini-2.5-flash",
+        model=GEMINI_MODEL,
         contents=json.dumps(payload),
         config=types.GenerateContentConfig(system_instruction=prompt),
     )
 
-    lesson_plan = response.text.strip()
+    lesson_plan = extract_text(response)
     ctx.prior_outputs.lesson_plan = lesson_plan
     return lesson_plan

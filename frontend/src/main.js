@@ -1,5 +1,5 @@
 import { startGeneration, streamStatus, getResult, submitFeedback, cancelGeneration } from "./api.js";
-import { createAgentCard, resetAgentCard, updateAgentCard } from "./ui/agentCard.js";
+import { createAgentCard, resetAgentCard, updateAgentCard, disableAgentCard, enableAgentCard } from "./ui/agentCard.js";
 import { renderEmptyOutputPanel, renderOutputPanel, setActiveOutputTab } from "./ui/outputPanel.js";
 import * as pdfjsLib from "pdfjs-dist";
 
@@ -9,7 +9,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const AGENTS = ["orchestrator", "research", "content", "assessment", "critic", "formatter"];
-const OUTPUT_ORDER = ["lesson", "quiz", "reading", "slides"];
+const OUTPUT_ORDER = ["lesson", "quiz", "reading"];
 const TONES = ["formal", "engaging", "socratic", "concise"];
 
 let currentJobId = null;
@@ -98,7 +98,6 @@ function buildInputPanel(container) {
               lesson: "Lesson plan",
               quiz: "Quiz + rubric",
               reading: "Reading list",
-              slides: "Slide outline",
             };
             return `<button type="button" class="tag active" data-output="${value}">${labels[value]}</button>`;
           }).join("")}
@@ -222,7 +221,25 @@ function buildInputPanel(container) {
 
   container.querySelectorAll("#output-tags .tag").forEach((button) => {
     button.addEventListener("click", () => {
+      const selected = [...container.querySelectorAll("#output-tags .tag.active")]
+        .map((b) => b.dataset.output);
+
+      // Prevent deselecting the last active tag
+      if (button.classList.contains("active") && selected.length === 1) return;
+
       button.classList.toggle("active");
+      const nowSelected = [...container.querySelectorAll("#output-tags .tag.active")]
+        .map((b) => b.dataset.output);
+
+      // Reflect skipped state on agent cards
+      if (agentCards.content) {
+        nowSelected.includes("lesson") ? enableAgentCard(agentCards.content) : disableAgentCard(agentCards.content);
+      }
+      if (agentCards.assessment) {
+        nowSelected.includes("quiz") ? enableAgentCard(agentCards.assessment) : disableAgentCard(agentCards.assessment);
+      }
+
+      renderEmptyOutputPanel(document.getElementById("output-panel"), { outputs: nowSelected });
     });
   });
 
@@ -256,6 +273,11 @@ function buildInputPanel(container) {
     const outputTypes = [...container.querySelectorAll("#output-tags .tag.active")]
       .map((button) => button.dataset.output);
 
+    if (!outputTypes.length) {
+      alert("Please select at least one output type.");
+      return;
+    }
+
     const durationVal = durationSelect.value === "custom"
       ? (durationCustom.value.trim() || "custom")
       : durationSelect.value;
@@ -271,7 +293,7 @@ function buildInputPanel(container) {
       duration: durationVal,
       tone: toneVal,
       learning_objectives: objectives,
-      outputs_requested: outputTypes.length ? outputTypes : OUTPUT_ORDER,
+      outputs_requested: outputTypes,
       document_context: extractedDocText || null,
     };
 
@@ -317,16 +339,24 @@ function setRunning(inputContainer, running) {
   const stopBtn = inputContainer.querySelector("#stop-btn");
   if (runBtn) runBtn.classList.toggle("hidden", running);
   if (stopBtn) stopBtn.classList.toggle("hidden", !running);
+
+  // Lock/unlock all form inputs during generation
+  inputContainer.querySelectorAll("input, select, textarea, button.tag").forEach((el) => {
+    el.disabled = running;
+  });
+
+  // Keep stop button enabled while running
+  if (stopBtn) stopBtn.disabled = false;
 }
 
-function preparePipelineRun(globalState) {
+function preparePipelineRun(globalState, outputs) {
   AGENTS.forEach((name) => resetAgentCard(agentCards[name]));
   setGlobalStatus(globalState);
-  renderEmptyOutputPanel(document.getElementById("output-panel"), { loading: true });
+  renderEmptyOutputPanel(document.getElementById("output-panel"), { loading: true, outputs });
 }
 
 async function startPipeline(formData) {
-  preparePipelineRun("RUNNING");
+  preparePipelineRun("RUNNING", formData.outputs_requested);
   setRunning(document.getElementById("input-panel"), true);
 
   try {
@@ -352,7 +382,7 @@ function openStream(jobId) {
       try {
         const result = await getResult(jobId);
         renderOutputPanel(document.getElementById("output-panel"), result);
-        setActiveOutputTab(document.getElementById("output-panel"), "lesson");
+        // Active tab is set inside renderOutputPanel based on outputs_requested
         setGlobalStatus("DONE");
       } catch (error) {
         setGlobalStatus("ERROR");

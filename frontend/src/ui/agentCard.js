@@ -110,6 +110,26 @@ export function updateAgentCard(card, status, message = "") {
   card.querySelector(".retry-btn").classList.toggle("hidden", status !== "error");
 }
 
+export function disableAgentCard(card) {
+  if (!card) return;
+  const agentName = card.dataset.agent;
+  const meta = AGENT_META[agentName];
+  card.classList.add("skipped");
+  card.querySelector(".status-dot").className = "status-dot skipped";
+  card.querySelector(".status-text").textContent = "skipped";
+  card.querySelector(".agent-log").innerHTML = `<div class="log-line info">Disabled — not included in selected outputs.</div>`;
+}
+
+export function enableAgentCard(card) {
+  if (!card) return;
+  const agentName = card.dataset.agent;
+  const meta = AGENT_META[agentName];
+  card.classList.remove("skipped");
+  card.querySelector(".status-dot").className = "status-dot waiting";
+  card.querySelector(".status-text").textContent = "waiting";
+  card.querySelector(".agent-log").innerHTML = `<div class="log-line info">${meta.initial}</div>`;
+}
+
 function classifyMessage(status, message) {
   if (status === "error") return "err";
   if (/approved|ready|complete|seeded|revised|found/i.test(message)) return "success";
