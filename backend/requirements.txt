@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+google-genai
+pydantic
+hypothesis
+pytest
+pytest-asyncio
+httpx
+python-dotenv
