@@ -1,4 +1,4 @@
-# EduAI Course Builder
+# EduAI
 
 A multi-agent AI application that generates complete, research-grounded course packages from teacher-provided inputs. Powered by Gemini and built with FastAPI + Vite.
 
