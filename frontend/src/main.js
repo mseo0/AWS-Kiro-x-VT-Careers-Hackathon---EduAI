@@ -375,4 +375,19 @@ function setGlobalStatus(label) {
   status.dataset.state = label.toLowerCase();
 }
 
-init();
+function showIntro() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="intro-page">
+      <div class="intro-logo">
+        <div class="intro-dot"></div>
+        <div class="intro-logo-wordmark">EduAI</div>
+        <p class="intro-tagline">AI-powered course builder — from topic to full curriculum in seconds.</p>
+      </div>
+      <button class="get-started-btn" id="get-started-btn">Get Started</button>
+    </div>
+  `;
+  document.getElementById("get-started-btn").addEventListener("click", init);
+}
+
+showIntro();
