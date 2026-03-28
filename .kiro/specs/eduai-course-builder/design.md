@@ -6,7 +6,7 @@ EduAI Course Builder is a multi-agent AI application that generates complete, re
 
 The system is split into two tiers:
 
-- **Python backend (FastAPI)** — hosts the agent pipeline, manages SharedContext, calls the Gemini API (`gemini-2.5-pro`) via the `google-generativeai` SDK, and integrates with the academic MCP server. The API key never leaves the server.
+- **Python backend (FastAPI)** — hosts the agent pipeline, manages SharedContext, calls the Gemini API (`gemini-2.5-pro`) via the `google-genai` SDK (`google.genai`), and integrates with the academic MCP server. The API key never leaves the server.he server.r.
 - **Vite frontend (vanilla JS)** — renders a three-column layout (input panel | agent pipeline | output panel), streams real-time agent status via SSE, and sends HTTP requests to the backend.
 
 ### Key Design Decisions
@@ -14,7 +14,7 @@ The system is split into two tiers:
 | Decision | Choice | Rationale |
 |---|---|---|
 | Backend framework | FastAPI | Async-native, SSE support, automatic OpenAPI docs |
-| AI model | `gemini-2.5-pro` | Best reasoning quality for multi-step academic content |
+| AI model | `gemini-2.5-flash` | Best reasoning quality for multi-step academic content |
 | Parallelism | `asyncio.gather` | Content and Assessment agents run concurrently after Research |
 | Real-time updates | Server-Sent Events (SSE) | Simpler than WebSockets for unidirectional status streaming |
 | Prompt storage | `prompts/*.txt` files | Decouples prompt iteration from code changes |
@@ -111,7 +111,7 @@ Each agent module exposes a single async function:
 Each agent:
 1. Reads its prompt from `prompts/<name>.txt`.
 2. Serialises the relevant SharedContext fields as the user message.
-3. Calls `gemini-2.5-pro` via `google-generativeai`.
+3. Calls `gemini-2.5-pro` via `google.genai`.
 4. Parses and validates the response.
 5. Updates SharedContext and returns.
 
@@ -119,17 +119,23 @@ Each agent:
 
 All agents use the same pattern:
 ```python
-import google.generativeai as genai
+from google import genai
 
-model = genai.GenerativeModel(
-    model_name="gemini-2.5-pro",
-    system_instruction=prompt_text,
-    tools=[mcp_tool],   # Research agent only
+client = genai.Client()
+response = await client.aio.models.generate_content(
+    model="gemini-2.5-pro",
+    contents=user_message,
+    config=genai.types.GenerateContentConfig(
+        system_instruction=prompt_text,
+        tools=[mcp_tool],   # Research agent only
+    ),
 )
-response = await model.generate_content_async(user_message)
 ```
 
-Error handling: any `google.api_core.exceptions.GoogleAPIError` is caught, sets `ctx.status = "error"`, and raises to halt the pipeline.
+Error handling: any `google.genai.errors.APIError` is caught, sets `ctx.status = "error"`, and raises to halt the pipeline.
+```
+
+Error handling: any `google.genai.errors.APIError` is caught, sets `ctx.status = "error"`, and raises to halt the pipeline.
 
 ### Frontend Components
 
@@ -416,7 +422,7 @@ Each `prompts/<agent>.txt` file contains the system instruction for that agent. 
 
 ### Property 18: All agent calls use gemini-2.5-pro
 
-*For any* agent invocation in the pipeline, the model name passed to the Gemini API shall be `gemini-2.5-pro`.
+*For any* agent invocation in the pipeline, the model name passed to the Gemini API shall be `gemini-2.5-flash`.
 
 **Validates: Requirements 10.2**
 
@@ -476,10 +482,10 @@ Each `prompts/<agent>.txt` file contains the system instruction for that agent. 
 
 **Validates: Requirements 14.1, 14.2**
 
----
+All agents wrap Gemini API calls in a try/except block catching `google.genai.errors.APIError` and `json.JSONDecodeError` (for response parsing). On error:
 
 ## Error Handling
-
+All agents wrap Gemini API calls in a try/except block catching `google.genai.errors.APIError` and `json.JSONDecodeError` (for response parsing). On error:
 ### API Errors
 
 All agents wrap Gemini API calls in a try/except block catching `google.api_core.exceptions.GoogleAPIError` and `json.JSONDecodeError` (for response parsing). On error:
@@ -553,7 +559,7 @@ Each property-based test must:
 | P15 | Set critic_passes = 2 before invocation; assert approved == True always |
 | P16 | Mock critic returning approved=False; assert formatter is never called |
 | P17 | Generate arbitrary prior_outputs; assert formatter output contains all non-null sections with headers |
-| P18 | Intercept all agent calls; assert model_name == "gemini-2.5-pro" for every call |
+| P18 | Intercept all agent calls; assert model_name == "gemini-2.5-flash" for every call |
 | P19 | Generate arbitrary SharedContext; assert user message is valid JSON deserialising to expected fields |
 | P21 | Generate arbitrary feedback messages; assert feedback_history grows by 1 with correct fields |
 | P22 | Mock feedback pipeline; assert critic is called before formatter and formatter only called if approved |
