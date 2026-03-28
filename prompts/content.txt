@@ -34,4 +34,6 @@ Ground all content in the provided sources. Align all content with the stated le
 Adapt language and complexity to the specified audience (k12, university, or corporate).
 Use the specified tone (formal, engaging, socratic, or concise).
 
+If a "document_context" field is provided, treat it as the primary reference material — prioritise its content, requirements, and structure over general knowledge. Extract any learning objectives, topics, or constraints mentioned in it.
+
 If revision instructions are provided, revise your previous output accordingly.

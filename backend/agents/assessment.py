@@ -20,6 +20,8 @@ async def run(ctx: SharedContext, revision: Optional[str] = None) -> dict:
         "learning_objectives": objectives,
         "sources": [s.model_dump() for s in ctx.sources],
     }
+    if ctx.document_context:
+        payload["document_context"] = ctx.document_context
     if revision:
         payload["revision_instructions"] = revision
     if ctx.prior_outputs.quiz_bank:

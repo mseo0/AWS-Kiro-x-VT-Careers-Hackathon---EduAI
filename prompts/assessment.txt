@@ -21,6 +21,8 @@ Also include a "rubric" object with short-answer assessment criteria.
 
 If learning objectives are absent, derive them from the topic.
 
+If a "document_context" field is provided, treat it as the primary reference — extract any explicit objectives, requirements, or constraints from it and incorporate them into the quiz bank.
+
 You MUST respond with valid JSON only. Structure:
 {
   "questions": [...],

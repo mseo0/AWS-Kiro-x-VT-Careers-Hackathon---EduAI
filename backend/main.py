@@ -97,7 +97,20 @@ async def result(job_id: str):
     )
 
 
-@app.post("/feedback/{job_id}")
+@app.post("/cancel/{job_id}")
+async def cancel(job_id: str):
+    job = job_store.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    task: asyncio.Task = job["task"]
+    if not task.done():
+        task.cancel()
+    job["ctx"].status = ContextStatus.error
+    await job["queue"].put({"agent": "pipeline", "status": "error", "message": "Cancelled by user."})
+    return {"status": "cancelled"}
+
+
+
 async def feedback(job_id: str, req: FeedbackRequest):
     job = job_store.get(job_id)
     if not job:

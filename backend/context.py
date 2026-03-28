@@ -16,6 +16,8 @@ class Tone(str, Enum):
     concise = "concise"
 
 
+
+
 class OutputType(str, Enum):
     lesson = "lesson"
     quiz = "quiz"
@@ -53,9 +55,10 @@ class SharedContext(BaseModel):
     topic: str
     audience: Audience
     duration: str
-    tone: Tone
+    tone: str  # free-form: formal | engaging | socratic | concise | custom
     learning_objectives: list[str]
     outputs_requested: list[OutputType]
+    document_context: Optional[str] = None  # extracted text from uploaded PDF
     sources: list[Source] = []
     prior_outputs: PriorOutputs = PriorOutputs()
     feedback_history: list[FeedbackEntry] = []
@@ -78,9 +81,10 @@ class GenerateRequest(BaseModel):
     topic: str
     audience: Audience
     duration: str
-    tone: Tone
+    tone: str  # free-form
     learning_objectives: list[str] = []
     outputs_requested: list[OutputType] = list(OutputType)
+    document_context: Optional[str] = None  # extracted text from uploaded PDF
 
 
 class GenerateResponse(BaseModel):
@@ -106,5 +110,6 @@ def seed_context(req: GenerateRequest) -> SharedContext:
         tone=req.tone,
         learning_objectives=req.learning_objectives,
         outputs_requested=req.outputs_requested,
+        document_context=req.document_context,
         status=ContextStatus.in_progress,
     )

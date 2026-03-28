@@ -19,6 +19,8 @@ async def run(ctx: SharedContext, revision: Optional[str] = None) -> str:
         "learning_objectives": ctx.learning_objectives,
         "sources": [s.model_dump() for s in ctx.sources],
     }
+    if ctx.document_context:
+        payload["document_context"] = ctx.document_context
     if revision:
         payload["revision_instructions"] = revision
     if ctx.prior_outputs.lesson_plan:

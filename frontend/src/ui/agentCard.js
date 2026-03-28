@@ -1,49 +1,118 @@
-/**
- * Renders and updates a single agent status card.
- * States: waiting | running | done | error
- */
+const AGENT_META = {
+  orchestrator: {
+    icon: "⬡",
+    iconClass: "purple",
+    title: "Orchestrator",
+    description: "Dynamic task decomposition & routing",
+    initial: "Initialising shared context object...",
+  },
+  research: {
+    icon: "◎",
+    iconClass: "teal",
+    title: "Research agent",
+    description: "Source gathering and grounding",
+    initial: "Awaiting topic and objective inputs...",
+  },
+  content: {
+    icon: "▣",
+    iconClass: "teal",
+    title: "Content agent",
+    description: "Lesson narratives and slide structure",
+    initial: "Waiting for research context...",
+  },
+  assessment: {
+    icon: "◈",
+    iconClass: "teal",
+    title: "Assessment agent",
+    description: "Objective-aligned quizzes and rubrics",
+    initial: "Waiting for learning objectives...",
+  },
+  critic: {
+    icon: "⬡",
+    iconClass: "coral",
+    title: "Critic / Validator",
+    description: "Accuracy, alignment, and tone review",
+    initial: "Waiting for draft outputs...",
+  },
+  formatter: {
+    icon: "◫",
+    iconClass: "blue",
+    title: "Formatter",
+    description: "Final package assembly",
+    initial: "Waiting for critic approval...",
+  },
+};
+
 export function createAgentCard(agentName) {
-  const card = document.createElement("div");
-  card.className = "agent-card waiting";
+  const meta = AGENT_META[agentName];
+  const card = document.createElement("article");
+  card.className = "agent-card waiting expanded";
   card.dataset.agent = agentName;
 
-  const dot = document.createElement("span");
-  dot.className = "status-dot";
+  card.innerHTML = `
+    <div class="agent-progress"><div class="agent-progress-bar"></div></div>
+    <div class="agent-header">
+      <div class="agent-icon ${meta.iconClass}">${meta.icon}</div>
+      <div class="agent-meta">
+        <div class="agent-name">${meta.title}</div>
+        <div class="agent-desc">${meta.description}</div>
+      </div>
+      <div class="agent-status">
+        <span class="status-dot waiting"></span>
+        <span class="status-text">waiting</span>
+      </div>
+    </div>
+    <div class="agent-body">
+      <div class="agent-log"><div class="log-line info">${meta.initial}</div></div>
+      <button class="retry-btn hidden" type="button">Retry Agent</button>
+    </div>
+  `;
 
-  const label = document.createElement("span");
-  label.className = "agent-label";
-  label.textContent = agentName.charAt(0).toUpperCase() + agentName.slice(1);
-
-  const progress = document.createElement("div");
-  progress.className = "progress-bar";
-  const progressInner = document.createElement("div");
-  progressInner.className = "progress-inner";
-  progress.appendChild(progressInner);
-
-  const log = document.createElement("div");
-  log.className = "agent-log";
-
-  const retryBtn = document.createElement("button");
-  retryBtn.className = "retry-btn hidden";
-  retryBtn.textContent = "Retry";
-
-  card.append(dot, label, progress, log, retryBtn);
   return card;
 }
 
-export function updateAgentCard(card, status, message = "") {
-  card.className = `agent-card ${status}`;
+export function resetAgentCard(card) {
+  const agentName = card?.dataset.agent;
+  if (!card || !agentName) return;
+  const meta = AGENT_META[agentName];
 
-  const log = card.querySelector(".agent-log");
-  const retryBtn = card.querySelector(".retry-btn");
-  const progress = card.querySelector(".progress-bar");
+  card.className = "agent-card waiting expanded";
+  card.querySelector(".status-dot").className = "status-dot waiting";
+  card.querySelector(".status-text").textContent = "waiting";
+  card.querySelector(".agent-log").innerHTML = `<div class="log-line info">${meta.initial}</div>`;
+  card.querySelector(".retry-btn").classList.add("hidden");
+  card.querySelector(".agent-progress-bar").style.width = "0%";
+}
+
+export function updateAgentCard(card, status, message = "") {
+  if (!card) return;
+
+  card.classList.remove("waiting", "running", "done", "error");
+  card.classList.add(status);
+  card.classList.add("expanded");
+
+  const dot = card.querySelector(".status-dot");
+  dot.className = `status-dot ${status}`;
+
+  const statusText = card.querySelector(".status-text");
+  statusText.textContent = status;
+
+  const progressBar = card.querySelector(".agent-progress-bar");
+  progressBar.style.width = status === "running" ? "72%" : status === "done" ? "100%" : "0%";
 
   if (message) {
-    const line = document.createElement("div");
-    line.textContent = message;
-    log.appendChild(line);
+    const logLine = document.createElement("div");
+    logLine.className = `log-line ${classifyMessage(status, message)}`;
+    logLine.textContent = message;
+    card.querySelector(".agent-log").appendChild(logLine);
   }
 
-  retryBtn.classList.toggle("hidden", status !== "error");
-  progress.classList.toggle("hidden", status !== "running");
+  card.querySelector(".retry-btn").classList.toggle("hidden", status !== "error");
+}
+
+function classifyMessage(status, message) {
+  if (status === "error") return "err";
+  if (/approved|ready|complete|seeded|revised|found/i.test(message)) return "success";
+  if (/revision|review/i.test(message)) return "warn";
+  return "info";
 }

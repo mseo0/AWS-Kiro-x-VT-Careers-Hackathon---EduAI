@@ -34,3 +34,9 @@ export async function submitFeedback(jobId, text, retry = false) {
   if (!res.ok) throw new Error((await res.json()).detail || "Failed to submit feedback.");
   return res.json();
 }
+
+export async function cancelGeneration(jobId) {
+  const res = await fetch(`${BASE}/cancel/${jobId}`, { method: "POST" });
+  if (!res.ok) throw new Error((await res.json()).detail || "Failed to cancel.");
+  return res.json();
+}
